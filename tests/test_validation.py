@@ -11,7 +11,8 @@ def test_invalid_bet():
         "lines":1
     })
 
-    assert response.json()["error"]=="Bet must be between 500 and 10000"
+    assert response.status_code==400
+    assert response.json()["detail"]=="Bet must be between 500 and 10000"
 
 
 def test_invalid_lines():
@@ -23,7 +24,9 @@ def test_invalid_lines():
         "lines":6
     })
 
-    assert response.json()["error"]=="Lines must be between 1 and 5"
+    assert response.status_code==400
+    assert response.json()["detail"]=="Lines must be between 1 and 5"
+
 
 def test_invalid_session():
     response=requests.get(f"{base_url}/game",params={
@@ -32,7 +35,8 @@ def test_invalid_session():
         "lines":1
     })
 
-    assert response.json()["error"]=="Invalid session"
+    assert response.status_code==404
+    assert response.json()["detail"]=="Invalid session"
 
 def test_insufficient_balance():
     session=requests.post(f"{base_url}/session").json()["session_id"]
@@ -43,10 +47,16 @@ def test_insufficient_balance():
         "lines":2
     })
 
-    assert response.json()["error"]=="Insufficient balance"
+    assert response.status_code==400
+    assert response.json()["detail"]=="Insufficient balance"
 
 def test_valid_game():
     session=requests.post(f"{base_url}/session").json()["session_id"]
+
+    requests.post(
+        f"{base_url}/session/{session}/deposit",
+        params={"amount":10000}
+    )
 
     response=requests.get(f"{base_url}/game",params={
         "session_id":session,
@@ -61,3 +71,50 @@ def test_valid_game():
     assert "balance" in data
     assert data["bet"]==500
     assert data["lines"]==1
+
+def test_deposit():
+    session=requests.post(f"{base_url}/session").json()["session_id"]
+
+    response=requests.post(
+        f"{base_url}/session/{session}/deposit",
+        params={"amount":5000}
+    )
+
+    data=response.json()
+
+    assert data["session_id"]==session
+    assert data["deposit"]==5000
+    assert data["balance"]==5000    
+
+def test_invalid_deposit():
+    session=requests.post(f"{base_url}/session").json()["session_id"]
+
+    response=requests.post(
+        f"{base_url}/session/{session}/deposit",
+        params={"amount":0}
+    )
+
+    assert response.status_code==400
+    assert response.json()["detail"]=="Deposit must be greater than 0"    
+
+def test_invalid_deposit_session():
+    response=requests.post(
+        f"{base_url}/session/999999/deposit",
+        params={"amount":5000}
+    )
+
+    assert response.status_code==404
+    assert response.json()["detail"]=="Invalid session"    
+
+def test_unique_sessions():
+    session1=requests.post(f"{base_url}/session").json()["session_id"]
+    session2=requests.post(f"{base_url}/session").json()["session_id"]
+
+    assert session1!=session2    
+
+
+def test_invalid_session_balance():
+    response=requests.get(f"{base_url}/session/999999")
+
+    assert response.status_code==404
+    assert response.json()["detail"]=="Invalid session"

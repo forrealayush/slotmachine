@@ -7,6 +7,9 @@ def test_concurrent_sessions():
     session1=requests.post(f"{base_url}/session").json()["session_id"]
     session2=requests.post(f"{base_url}/session").json()["session_id"]
 
+    requests.post(f"{base_url}/session/{session1}/deposit",params={"amount":10000})
+    requests.post(f"{base_url}/session/{session2}/deposit",params={"amount":10000})
+    
     def play(session_id):
         response=requests.get(f"{base_url}/game",params={
             "session_id":session_id,

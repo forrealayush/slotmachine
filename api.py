@@ -1,4 +1,4 @@
-from fastapi import FastAPI,HTTPException
+from fastapi import FastAPI,HTTPException,Query 
 from threading import Lock
 from game.engine import get_slot_machine_spin,symbol_count,check_winnings,symbol_value
 import uuid
@@ -12,31 +12,41 @@ def home():
     return {"message":"slot machine is running"}
 
 @app.get("/game")
-def game(session_id:str,bet:int,lines:int):
-    if bet<500 or bet>10000:
-     raise HTTPException(status_code=400,detail="Bet must be between 500 and 10000")
+def game(
+    session_id:str,
+    bet:int=Query(description="Bet per line (500–10,000)"),
+    lines:int=Query(description="Number of paylines (1–5)")
+):
+     """
+    Play the slot machine.
+
+    bet: Bet per line, from 500 to 10,000.
+    lines: Number of paylines, from 1 to 5.
+    """
+     if bet<500 or bet>10000:
+      raise HTTPException(status_code=400,detail="Bet must be between 500 and 10000")
     
-    if lines<1 or lines>5:
-     raise HTTPException(status_code=400,detail="Lines must be between 1 and 5")
-    if session_id not in sessions:
-     raise HTTPException(status_code=404,detail="Invalid session")
+     if lines<1 or lines>5:
+      raise HTTPException(status_code=400,detail="Lines must be between 1 and 5")
+     if session_id not in sessions:
+      raise HTTPException(status_code=404,detail="Invalid session")
 
-    total_bet=bet*lines
+     total_bet=bet*lines
 
-    slots=get_slot_machine_spin(3,3,symbol_count)
-    winnings,wins=check_winnings(slots,lines,bet,symbol_value)
+     slots=get_slot_machine_spin(3,3,symbol_count)
+     winnings,wins=check_winnings(slots,lines,bet,symbol_value)
 
-    with session_locks[session_id]:
-        balance=sessions[session_id]["balance"]
+     with session_locks[session_id]:
+         balance=sessions[session_id]["balance"]
 
-        if total_bet>balance:
-         raise HTTPException(status_code=400,detail="Insufficient balance")
+         if total_bet>balance:
+          raise HTTPException(status_code=400,detail="Insufficient balance")
 
-        balance-=total_bet
-        balance+=winnings
-        sessions[session_id]["balance"]=balance
+         balance-=total_bet
+         balance+=winnings
+         sessions[session_id]["balance"]=balance
 
-    return {
+     return {
         "slots":[" | ".join(slots[c][r] for c in range(3)) for r in range(3)],
         "bet":bet,
         "lines":lines,

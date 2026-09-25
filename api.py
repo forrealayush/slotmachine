@@ -72,7 +72,7 @@ def get_session(session_id:str):
     }
 
 @app.post("/session/{session_id}/deposit")
-def deposit(session_id:str,amount:int=Query(description="Deposit amount (minimum ₹500)")):   
+def deposit(session_id:str,amount:int=Query(description="Deposit amount (minimum 500)")):   
     if session_id not in sessions:
      raise HTTPException(status_code=404,detail="Invalid session")
     

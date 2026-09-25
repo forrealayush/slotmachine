@@ -91,11 +91,11 @@ def test_invalid_deposit():
 
     response=requests.post(
         f"{base_url}/session/{session}/deposit",
-        params={"amount":0}
+        params={"amount":100}
     )
 
     assert response.status_code==400
-    assert response.json()["detail"]=="Deposit must be greater than 0"    
+    assert response.json()["detail"]=="minimum deposit amount - 500"    
 
 def test_invalid_deposit_session():
     response=requests.post(

@@ -62,6 +62,22 @@ Swagger UI can be used to create sessions, make deposits, play the game, and che
 * Automated tests for validation and concurrent requests
 * Interactive API documentation through Swagger UI
 
+### Game Rules
+
+* **A, B, C, D, W** are the available symbols.
+* `W` is a wild symbol and can substitute for other symbols when checking a winning line.
+* There are **5 paylines** available: 3 horizontal and 2 diagonal.
+* Win multipliers:
+
+  * `D` ×2
+  * `C` ×3
+  * `B` ×4
+  * `A` ×5
+  * `W` ×10
+* A line containing `W-W-W` is classified as a **jackpot**.
+* Winning lines with wild substitutions, such as `C-W-C`, are treated as regular wins.
+
+
 ## Project Structure
 
 ```text

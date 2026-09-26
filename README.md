@@ -55,6 +55,7 @@ Swagger UI can be used to create sessions, make deposits, play the game, and che
 * Five paylines using rows and diagonals
 * Wild symbol support
 * Jackpot multipliers for matching symbols
+* Track session statistics including spins, total winnings, total losses, and net profit
 * Session specific balance management
 * Per session locking for concurrent balance updates
 * Input validation with appropriate HTTP status codes
@@ -115,7 +116,7 @@ The minimum deposit amount is ₹500.
 
 ### `GET /session/{session_id}`
 
-Returns the current balance and session ID.
+Returns the current balance, session ID, and session statistics including spins, total winnings, total losses, and net profit.
 
 ### `GET /game`
 

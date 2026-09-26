@@ -22,7 +22,11 @@ def check_winnings(columns,lines,bet,values):
             win=values[symbol_to_use]*bet
             multiplier=jackpot_multiplier[symbol_to_use]
             win*=multiplier
-            winning_lines.append((f"Line {line_number+1}",multiplier,True))
+            is_jackpot=all(s=="W" for s in current_line)
+            if is_jackpot:
+             winning_lines.append((f"Line {line_number+1}",f"x{multiplier}","jackpot!"))
+            else:
+             winning_lines.append((f"Line {line_number+1}",f"multiplier x{multiplier}"))
             winnings+=win
     return winnings,winning_lines
 

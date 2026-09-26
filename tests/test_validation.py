@@ -118,3 +118,35 @@ def test_invalid_session_balance():
 
     assert response.status_code==404
     assert response.json()["detail"]=="Invalid session"
+
+
+def test_session_stats():
+    session_id=requests.post(f"{base_url}/session").json()["session_id"]
+
+    requests.post(
+        f"{base_url}/session/{session_id}/deposit",
+        params={"amount":10000}
+    )
+
+    game=requests.get(
+        f"{base_url}/game",
+        params={
+            "session_id":session_id,
+            "bet":500,
+            "lines":1
+        }
+    ).json()
+
+    stats=requests.get(
+        f"{base_url}/session/{session_id}"
+    ).json()
+
+    assert stats["spins"]==1
+    assert stats["net_profit"]==game["winnings"]-500
+
+    if game["winnings"]>0:
+        assert stats["total_won"]==game["winnings"]
+        assert stats["total_lost"]==0
+    else:
+        assert stats["total_won"]==0
+        assert stats["total_lost"]==500

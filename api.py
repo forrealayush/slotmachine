@@ -35,6 +35,7 @@ def game(
 
      slots=get_slot_machine_spin(3,3,symbol_count)
      winnings,wins=check_winnings(slots,lines,bet,symbol_value)
+     net=winnings-total_bet
 
      with session_locks[session_id]:
          balance=sessions[session_id]["balance"]
@@ -45,6 +46,13 @@ def game(
          balance-=total_bet
          balance+=winnings
          sessions[session_id]["balance"]=balance
+         sessions[session_id]["spins"]+=1
+         sessions[session_id]["net_profit"]+=net
+
+         if winnings>0:
+          sessions[session_id]["total_won"]+=winnings
+         else:
+          sessions[session_id]["total_lost"]+=total_bet
 
      return {
         "slots":[" | ".join(slots[c][r] for c in range(3)) for r in range(3)],
@@ -57,7 +65,15 @@ def game(
 @app.post("/session")
 def create_session():
     session_id=str(uuid.uuid4())
-    sessions[session_id]={"balance":0}
+    sessions[session_id]={
+    "balance":0,
+    "spins":0,
+    "total_won":0,
+    "total_lost":0,
+    "net_profit":0,
+    "best_win":0,
+    "worst_loss":0}
+   
     session_locks[session_id]=Lock()
     return {"session_id":session_id,"balance":0}
 
@@ -68,7 +84,11 @@ def get_session(session_id:str):
 
     return {
         "session_id":session_id,
-        "balance":sessions[session_id]["balance"]
+        "balance":sessions[session_id]["balance"],
+        "spins":sessions[session_id]["spins"],
+        "total_won":sessions[session_id]["total_won"],
+        "total_lost":sessions[session_id]["total_lost"],
+        "net_profit":sessions[session_id]["net_profit"]
     }
 
 @app.post("/session/{session_id}/deposit")

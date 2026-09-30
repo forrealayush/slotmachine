@@ -1,3 +1,6 @@
 __pycache__/
 .pytest_cache/
 *.pyc
+players.csv
+players.json
+casino.db

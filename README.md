@@ -2,7 +2,7 @@
 
 A Python-based slot machine backend built with FastAPI.
 
-The project started as a command-line slot machine and was later developed into a REST API with session management, balance handling, persistent database storage, game logic, input validation, concurrency handling, historical player data, admin statistics, and file exports.
+The project started as a command-line slot machine and was later developed into a REST API with authentication and role-based access control, session management, balance handling, persistent database storage, game logic, input validation, concurrency handling, historical player data, admin statistics, and file exports.
 
 The backend uses SQLite with SQLAlchemy to persist users, game sessions, bets, and deposits.
 

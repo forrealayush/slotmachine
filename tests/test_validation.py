@@ -79,8 +79,8 @@ def test_cannot_use_another_users_session(client,session_id):
     assert r.json()["detail"]=="Invalid session"
 
 def test_session_survives_restart(client,auth_headers,session_id):
-    from api import session_locks
-    session_locks.clear()
+    from api import user_locks
+    user_locks.clear()
 
     r=client.post(f"/session/{session_id}/deposit",params={"amount":1000},headers=auth_headers)
     assert r.status_code==200

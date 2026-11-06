@@ -21,9 +21,10 @@ from starlette.background import BackgroundTask
 app=FastAPI()
 
 
-session_locks={}
-def get_session_lock(session_id:str):
-    return session_locks.setdefault(session_id,Lock())
+user_locks={}
+
+def get_user_lock(user_id:int):
+    return user_locks.setdefault(user_id,Lock())
 hasher=PasswordHash.recommended()
 
 class RegisterRequest(BaseModel):
@@ -159,7 +160,7 @@ def deposit(
     if not user:
         raise HTTPException(status_code=404,detail="User not found")
 
-    with get_session_lock(session_id):
+    with get_user_lock(current_user.id):
         db.refresh(user)
         user.balance+=amount
 
@@ -214,7 +215,7 @@ def game(
     winnings,wins=check_winnings(slots,lines,bet,symbol_value)
     net=winnings-total_bet
 
-    with get_session_lock(session_id):
+    with get_user_lock(current_user.id):
         user=db.query(User).filter(User.id==game_session.user_id).first()
         db.refresh(user)
 

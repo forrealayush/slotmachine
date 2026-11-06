@@ -65,7 +65,12 @@ def get_current_user(token:str=Depends(oauth2_scheme),db:Session=Depends(get_db)
     if not user:
         raise credentials_error
 
-    return user        
+    return user     
+
+def require_admin(current_user:User=Depends(get_current_user)):
+    if current_user.role!="admin":
+        raise HTTPException(status_code=403,detail="Admin access required")
+    return current_user   
 
 
 @app.get("/")
@@ -107,12 +112,7 @@ def login(form:OAuth2PasswordRequestForm=Depends(),db:Session=Depends(get_db)):
     return {"access_token":token,"token_type":"bearer"}
 
 @app.post("/session")
-def create_session(username:str,db:Session=Depends(get_db)):
-    user=db.query(User).filter(User.username==username).first()
-
-    if not user:
-        raise HTTPException(status_code=404,detail="User not found")
-
+def create_session(user:User=Depends(get_current_user),db:Session=Depends(get_db)):
     session_id=str(uuid.uuid4())
 
     game_session=GameSession(
@@ -143,6 +143,7 @@ def create_session(username:str,db:Session=Depends(get_db)):
 def deposit(
     session_id:str,
     amount:int=Query(description="Deposit amount (minimum 500)"),
+    current_user:User=Depends(get_current_user),
     db:Session=Depends(get_db)
 ):
     if session_id not in sessions:
@@ -154,6 +155,8 @@ def deposit(
     game_session=db.query(GameSession).filter(GameSession.id==session_id).first()
 
     if not game_session:
+        raise HTTPException(status_code=404,detail="Invalid session")
+    if game_session.user_id!=current_user.id:
         raise HTTPException(status_code=404,detail="Invalid session")
 
     user=db.query(User).filter(User.id==game_session.user_id).first()
@@ -307,7 +310,7 @@ def deposit_history(username:str,db:Session=Depends(get_db)):
         "deposits":deposits
     }
 
-@app.get("/admin/stats")
+@app.get("/admin/stats",dependencies=[Depends(require_admin)])
 def admin_stats(days:int=Query(7,ge=1),db:Session=Depends(get_db)):
     total_players=db.query(User).count()
     total_bets=db.query(Bet).all()
@@ -375,7 +378,7 @@ def admin_stats(days:int=Query(7,ge=1),db:Session=Depends(get_db)):
         }
     }
 
-@app.get("/admin/players")
+@app.get("/admin/players",dependencies=[Depends(require_admin)])
 def admin_players(db:Session=Depends(get_db)):
     users=db.query(User).all()
 
@@ -410,7 +413,7 @@ def admin_players(db:Session=Depends(get_db)):
         "players":players
     }
 
-@app.get("/admin/players/export")
+@app.get("/admin/players/export",dependencies=[Depends(require_admin)])
 def export_players(db:Session=Depends(get_db)):
     users=db.query(User).all()
 
@@ -444,7 +447,7 @@ def export_players(db:Session=Depends(get_db)):
 
     return FileResponse("players.csv",filename="players.csv")
 
-@app.get("/admin/players/export/json")
+@app.get("/admin/players/export/json",dependencies=[Depends(require_admin)])
 def export_players_json(db:Session=Depends(get_db)):
     users=db.query(User).all()
 

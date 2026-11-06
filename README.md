@@ -149,6 +149,8 @@ This allows historical game activity to be retrieved and aggregated rather than 
 
 * There are **5 paylines** available: 3 horizontal and 2 diagonal.
 
+* A winning line pays the bet per payline multiplied by the symbol's multiplier
+
 * Win multipliers:
 
   * `D` ×2

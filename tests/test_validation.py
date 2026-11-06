@@ -1,152 +1,79 @@
-import requests
-
-base_url="http://127.0.0.1:8000"
-
-def test_invalid_bet():
-    session=requests.post(f"{base_url}/session").json()["session_id"]
-
-    response=requests.get(f"{base_url}/game",params={
-        "session_id":session,
-        "bet":100,
-        "lines":1
-    })
-
-    assert response.status_code==400
-    assert response.json()["detail"]=="Bet must be between 500 and 10000"
+def test_invalid_bet(client,auth_headers,session_id):
+    r=client.get("/game",params={"session_id":session_id,"bet":100,"lines":1},headers=auth_headers)
+    assert r.status_code==400
+    assert r.json()["detail"]=="Bet must be between 500 and 10000"
 
 
-def test_invalid_lines():
-    session=requests.post(f"{base_url}/session").json()["session_id"]
-
-    response=requests.get(f"{base_url}/game",params={
-        "session_id":session,
-        "bet":500,
-        "lines":6
-    })
-
-    assert response.status_code==400
-    assert response.json()["detail"]=="Lines must be between 1 and 5"
+def test_invalid_lines(client,auth_headers,session_id):
+    r=client.get("/game",params={"session_id":session_id,"bet":500,"lines":6},headers=auth_headers)
+    assert r.status_code==400
+    assert r.json()["detail"]=="Lines must be between 1 and 5"
 
 
-def test_invalid_session():
-    response=requests.get(f"{base_url}/game",params={
-        "session_id":"999999",
-        "bet":500,
-        "lines":1
-    })
+def test_invalid_session(client,auth_headers):
+    r=client.get("/game",params={"session_id":"999999","bet":500,"lines":1},headers=auth_headers)
+    assert r.status_code==404
+    assert r.json()["detail"]=="Invalid session"
 
-    assert response.status_code==404
-    assert response.json()["detail"]=="Invalid session"
 
-def test_insufficient_balance():
-    session=requests.post(f"{base_url}/session").json()["session_id"]
+def test_insufficient_balance(client,auth_headers,session_id):
+    r=client.get("/game",params={"session_id":session_id,"bet":10000,"lines":2},headers=auth_headers)
+    assert r.status_code==400
+    assert r.json()["detail"]=="Insufficient balance"
 
-    response=requests.get(f"{base_url}/game",params={
-        "session_id":session,
-        "bet":10000,
-        "lines":2
-    })
 
-    assert response.status_code==400
-    assert response.json()["detail"]=="Insufficient balance"
+def test_valid_game(client,auth_headers,session_id):
+    client.post(f"/session/{session_id}/deposit",params={"amount":10000},headers=auth_headers)
 
-def test_valid_game():
-    session=requests.post(f"{base_url}/session").json()["session_id"]
+    r=client.get("/game",params={"session_id":session_id,"bet":500,"lines":1},headers=auth_headers)
+    data=r.json()
 
-    requests.post(
-        f"{base_url}/session/{session}/deposit",
-        params={"amount":10000}
-    )
-
-    response=requests.get(f"{base_url}/game",params={
-        "session_id":session,
-        "bet":500,
-        "lines":1
-    })
-
-    data=response.json()
-
+    assert r.status_code==200
     assert "slots" in data
     assert "winnings" in data
     assert "balance" in data
     assert data["bet"]==500
     assert data["lines"]==1
 
-def test_deposit():
-    session=requests.post(f"{base_url}/session").json()["session_id"]
 
-    response=requests.post(
-        f"{base_url}/session/{session}/deposit",
-        params={"amount":5000}
-    )
+def test_deposit(client,auth_headers,session_id):
+    r=client.post(f"/session/{session_id}/deposit",params={"amount":5000},headers=auth_headers)
+    data=r.json()
 
-    data=response.json()
-
-    assert data["session_id"]==session
+    assert r.status_code==200
+    assert data["session_id"]==session_id
     assert data["deposit"]==5000
-    assert data["balance"]==5000    
-
-def test_invalid_deposit():
-    session=requests.post(f"{base_url}/session").json()["session_id"]
-
-    response=requests.post(
-        f"{base_url}/session/{session}/deposit",
-        params={"amount":100}
-    )
-
-    assert response.status_code==400
-    assert response.json()["detail"]=="minimum deposit amount - 500"    
-
-def test_invalid_deposit_session():
-    response=requests.post(
-        f"{base_url}/session/999999/deposit",
-        params={"amount":5000}
-    )
-
-    assert response.status_code==404
-    assert response.json()["detail"]=="Invalid session"    
-
-def test_unique_sessions():
-    session1=requests.post(f"{base_url}/session").json()["session_id"]
-    session2=requests.post(f"{base_url}/session").json()["session_id"]
-
-    assert session1!=session2    
+    assert data["balance"]==5000
 
 
-def test_invalid_session_balance():
-    response=requests.get(f"{base_url}/session/999999")
+def test_invalid_deposit(client,auth_headers,session_id):
+    r=client.post(f"/session/{session_id}/deposit",params={"amount":100},headers=auth_headers)
+    assert r.status_code==400
+    assert r.json()["detail"]=="minimum deposit amount - 500"
 
-    assert response.status_code==404
-    assert response.json()["detail"]=="Invalid session"
+
+def test_invalid_deposit_session(client,auth_headers):
+    r=client.post("/session/999999/deposit",params={"amount":5000},headers=auth_headers)
+    assert r.status_code==404
+    assert r.json()["detail"]=="Invalid session"
 
 
-def test_session_stats():
-    session_id=requests.post(f"{base_url}/session").json()["session_id"]
+def test_unique_sessions(client,auth_headers):
+    s1=client.post("/session",headers=auth_headers).json()["session_id"]
+    s2=client.post("/session",headers=auth_headers).json()["session_id"]
+    assert s1!=s2
 
-    requests.post(
-        f"{base_url}/session/{session_id}/deposit",
-        params={"amount":10000}
-    )
 
-    game=requests.get(
-        f"{base_url}/game",
-        params={
-            "session_id":session_id,
-            "bet":500,
-            "lines":1
-        }
-    ).json()
+def test_game_requires_login(client,session_id):
+    r=client.get("/game",params={"session_id":session_id,"bet":500,"lines":1})
+    assert r.status_code==401
 
-    stats=requests.get(
-        f"{base_url}/session/{session_id}"
-    ).json()
 
-    assert stats["spins"]==1
-    assert stats["net_profit"]==game["winnings"]-500
+def test_cannot_use_another_users_session(client,session_id):
+    client.post("/register",json={"username":"player2","password":"pw12345"})
+    r=client.post("/login",data={"username":"player2","password":"pw12345"})
+    other={"Authorization":f"Bearer {r.json()['access_token']}"}
 
-    if game["winnings"]>0:
-        assert stats["total_won"]==game["winnings"]
-        assert stats["total_lost"]==0
-    else:
-        assert stats["total_won"]==0
-        assert stats["total_lost"]==500
+    r=client.get("/game",params={"session_id":session_id,"bet":500,"lines":1},headers=other)
+    assert r.status_code==404
+    assert r.json()["detail"]=="Invalid session"

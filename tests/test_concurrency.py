@@ -1,40 +1,44 @@
-import requests
 import concurrent.futures
 
-base_url="http://127.0.0.1:8000"
 
-def test_concurrent_sessions():
-    session1=requests.post(f"{base_url}/session").json()["session_id"]
-    session2=requests.post(f"{base_url}/session").json()["session_id"]
+def make_player(client,username):
+    client.post("/register",json={"username":username,"password":"pw12345"})
+    r=client.post("/login",data={"username":username,"password":"pw12345"})
+    headers={"Authorization":f"Bearer {r.json()['access_token']}"}
+    session_id=client.post("/session",headers=headers).json()["session_id"]
+    client.post(f"/session/{session_id}/deposit",params={"amount":10000},headers=headers)
+    return headers,session_id
 
-    requests.post(f"{base_url}/session/{session1}/deposit",params={"amount":10000})
-    requests.post(f"{base_url}/session/{session2}/deposit",params={"amount":10000})
-    
-    def play(session_id):
-        response=requests.get(f"{base_url}/game",params={
-            "session_id":session_id,
-            "bet":500,
-            "lines":2
-        })
-        return response.json()
 
-    session_ids=[session1,session2]*10
+def test_concurrent_sessions(client):
+    players={
+        "alice":make_player(client,"alice"),
+        "bob":make_player(client,"bob")
+    }
+
+    def play(name):
+        headers,session_id=players[name]
+        r=client.get(
+            "/game",
+            params={"session_id":session_id,"bet":500,"lines":2},
+            headers=headers
+        )
+        return name,r.status_code,r.json()
+
+    names=["alice","bob"]*10
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
-        results=list(executor.map(play,session_ids))
+        results=list(executor.map(play,names))
 
-    for session_id in [session1,session2]:
-        session_results=[
-            result for result,used_session in zip(results,session_ids)
-            if used_session==session_id and "error" not in result
-        ]
+    for name in players:
+        headers,_=players[name]
+        ok=[data for n,status,data in results if n==name and status==200]
 
-        total_bets=sum(r["bet"]*r["lines"] for r in session_results)
-        total_winnings=sum(r["winnings"] for r in session_results)
+        assert len(ok)==10
+
+        total_bets=sum(d["bet"]*d["lines"] for d in ok)
+        total_winnings=sum(d["winnings"] for d in ok)
         expected=10000-total_bets+total_winnings
 
-        actual=requests.get(
-            f"{base_url}/session/{session_id}"
-        ).json()["balance"]
-
-        assert expected==actual
+        r=client.get(f"/player/{name}/history",headers=headers)
+        assert r.json()["balance"]==expected    

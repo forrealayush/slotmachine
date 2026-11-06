@@ -165,6 +165,7 @@ def deposit(
         raise HTTPException(status_code=404,detail="User not found")
 
     with session_locks[session_id]:
+        db.refresh(user)
         user.balance+=amount
 
         db_deposit=Deposit(
@@ -222,6 +223,9 @@ def game(
 
     with session_locks[session_id]:
         user=db.query(User).filter(User.id==game_session.user_id).first()
+        db.refresh(user)
+
+        balance=user.balance
 
         balance=user.balance
 

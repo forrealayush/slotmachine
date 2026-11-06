@@ -189,6 +189,7 @@ def game(
     session_id:str,
     bet:int=Query(description="Bet per line (500–10,000)"),
     lines:int=Query(description="Number of paylines (1–5)"),
+    current_user:User=Depends(get_current_user),
     db:Session=Depends(get_db)
 ):
     """
@@ -209,6 +210,8 @@ def game(
     game_session=db.query(GameSession).filter(GameSession.id==session_id).first()
 
     if not game_session:
+        raise HTTPException(status_code=404,detail="Invalid session")
+    if game_session.user_id!=current_user.id:
         raise HTTPException(status_code=404,detail="Invalid session")
 
     total_bet=bet*lines
@@ -251,8 +254,11 @@ def game(
 
 
 @app.get("/player/{username}/history")
-def player_history(username:str,db:Session=Depends(get_db)):
+def player_history(username:str,current_user:User=Depends(get_current_user),db:Session=Depends(get_db)):
     user=db.query(User).filter(User.username==username).first()
+
+    if current_user.username!=username and current_user.role!="admin":
+        raise HTTPException(status_code=403,detail="Not allowed to view this player")
 
     if not user:
         raise HTTPException(status_code=404,detail="User not found")
@@ -290,8 +296,11 @@ def player_history(username:str,db:Session=Depends(get_db)):
 
 
 @app.get("/player/{username}/deposits")
-def deposit_history(username:str,db:Session=Depends(get_db)):
+def deposit_history(username:str,current_user:User=Depends(get_current_user),db:Session=Depends(get_db)):
     user=db.query(User).filter(User.username==username).first()
+
+    if current_user.username!=username and current_user.role!="admin":
+        raise HTTPException(status_code=403,detail="Not allowed to view this player")
 
     if not user:
         raise HTTPException(status_code=404,detail="User not found")

@@ -18,7 +18,7 @@ def test_concurrent_sessions(client):
 
     def play(name):
         headers,session_id=players[name]
-        r=client.get(
+        r=client.post(
             "/game",
             params={"session_id":session_id,"bet":500,"lines":2},
             headers=headers

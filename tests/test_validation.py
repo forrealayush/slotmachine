@@ -1,23 +1,23 @@
 def test_invalid_bet(client,auth_headers,session_id):
-    r=client.get("/game",params={"session_id":session_id,"bet":100,"lines":1},headers=auth_headers)
+    r=client.post("/game",params={"session_id":session_id,"bet":100,"lines":1},headers=auth_headers)
     assert r.status_code==400
     assert r.json()["detail"]=="Bet must be between 500 and 10000"
 
 
 def test_invalid_lines(client,auth_headers,session_id):
-    r=client.get("/game",params={"session_id":session_id,"bet":500,"lines":6},headers=auth_headers)
+    r=client.post("/game",params={"session_id":session_id,"bet":500,"lines":6},headers=auth_headers)
     assert r.status_code==400
     assert r.json()["detail"]=="Lines must be between 1 and 5"
 
 
 def test_invalid_session(client,auth_headers):
-    r=client.get("/game",params={"session_id":"999999","bet":500,"lines":1},headers=auth_headers)
+    r=client.post("/game",params={"session_id":"999999","bet":500,"lines":1},headers=auth_headers)
     assert r.status_code==404
     assert r.json()["detail"]=="Invalid session"
 
 
 def test_insufficient_balance(client,auth_headers,session_id):
-    r=client.get("/game",params={"session_id":session_id,"bet":10000,"lines":2},headers=auth_headers)
+    r=client.post("/game",params={"session_id":session_id,"bet":10000,"lines":2},headers=auth_headers)
     assert r.status_code==400
     assert r.json()["detail"]=="Insufficient balance"
 
@@ -25,7 +25,7 @@ def test_insufficient_balance(client,auth_headers,session_id):
 def test_valid_game(client,auth_headers,session_id):
     client.post(f"/session/{session_id}/deposit",params={"amount":10000},headers=auth_headers)
 
-    r=client.get("/game",params={"session_id":session_id,"bet":500,"lines":1},headers=auth_headers)
+    r=client.post("/game",params={"session_id":session_id,"bet":500,"lines":1},headers=auth_headers)
     data=r.json()
 
     assert r.status_code==200
@@ -65,7 +65,7 @@ def test_unique_sessions(client,auth_headers):
 
 
 def test_game_requires_login(client,session_id):
-    r=client.get("/game",params={"session_id":session_id,"bet":500,"lines":1})
+    r=client.post("/game",params={"session_id":session_id,"bet":500,"lines":1})
     assert r.status_code==401
 
 
@@ -74,6 +74,6 @@ def test_cannot_use_another_users_session(client,session_id):
     r=client.post("/login",data={"username":"player2","password":"pw12345"})
     other={"Authorization":f"Bearer {r.json()['access_token']}"}
 
-    r=client.get("/game",params={"session_id":session_id,"bet":500,"lines":1},headers=other)
+    r=client.post("/game",params={"session_id":session_id,"bet":500,"lines":1},headers=other)
     assert r.status_code==404
     assert r.json()["detail"]=="Invalid session"

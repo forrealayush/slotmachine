@@ -123,12 +123,7 @@ def create_session(user:User=Depends(get_current_user),db:Session=Depends(get_db
     db.add(game_session)
     db.commit()
 
-    sessions[session_id]={
-        "spins":0,
-        "total_won":0,
-        "total_lost":0,
-        "net_profit":0
-    }
+    sessions[session_id]=user.id
 
     session_locks[session_id]=Lock()
 
@@ -185,7 +180,7 @@ def deposit(
     }
 
 
-@app.get("/game")
+@app.post("/game")
 def game(
     session_id:str,
     bet:int=Query(description="Bet per line (500–10,000)"),

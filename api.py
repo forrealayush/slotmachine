@@ -16,6 +16,8 @@ from sqlalchemy.exc import IntegrityError
 import os
 import jwt
 from fastapi.security import OAuth2PasswordRequestForm,OAuth2PasswordBearer
+import tempfile
+from starlette.background import BackgroundTask
 app=FastAPI()
 
 sessions={}
@@ -425,7 +427,8 @@ def admin_players(db:Session=Depends(get_db)):
 def export_players(db:Session=Depends(get_db)):
     users=db.query(User).all()
 
-    with open("players.csv","w",newline="") as file:
+    tmp=tempfile.NamedTemporaryFile("w",newline="",suffix=".csv",delete=False)
+    with tmp as file:
         writer=csv.writer(file)
         writer.writerow(["username","spins","total_bets","total_winnings","net_result"])
 
@@ -453,7 +456,11 @@ def export_players(db:Session=Depends(get_db)):
                 net_result
             ])
 
-    return FileResponse("players.csv",filename="players.csv")
+        return FileResponse(
+        tmp.name,
+        filename="players.csv",
+        background=BackgroundTask(os.remove,tmp.name)
+    )
 
 @app.get("/admin/players/export/json",dependencies=[Depends(require_admin)])
 def export_players_json(db:Session=Depends(get_db)):
@@ -483,10 +490,15 @@ def export_players_json(db:Session=Depends(get_db)):
             "net_result":total_winnings-total_bets
         })
 
-    with open("players.json","w") as file:
+    tmp=tempfile.NamedTemporaryFile("w",suffix=".json",delete=False)
+    with tmp as file:
         json.dump({"players":players},file,indent=4)
 
-    return FileResponse("players.json",filename="players.json")
+    return FileResponse(
+        tmp.name,
+        filename="players.json",
+        background=BackgroundTask(os.remove,tmp.name)
+    )
 
 @app.get("/me")
 def me(current_user:User=Depends(get_current_user)):

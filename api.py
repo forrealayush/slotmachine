@@ -10,12 +10,19 @@ from datetime import datetime,timedelta
 import csv
 from fastapi.responses import FileResponse
 import json
-
+from pydantic import BaseModel
+from pwdlib import PasswordHash
+from sqlalchemy.exc import IntegrityError
 
 app=FastAPI()
 
 sessions={}
 session_locks={}
+hasher=PasswordHash.recommended()
+
+class RegisterRequest(BaseModel):
+    username:str
+    password:str
 
 
 def get_db():
@@ -32,15 +39,19 @@ def home():
 
 
 @app.post("/register")
-def register(username:str,db:Session=Depends(get_db)):
+def register(data:RegisterRequest,db:Session=Depends(get_db)):
     user=User(
-        username=username,
-        password_hash="temporary",
+        username=data.username,
+        password_hash=hasher.hash(data.password),
         role="player"
     )
 
     db.add(user)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409,detail="Username already taken")
     db.refresh(user)
 
     return {

@@ -135,7 +135,6 @@ slotmachine/
 * `database.py` contains the SQLAlchemy database engine and database session configuration.
 * `models.py` defines the SQLAlchemy database models and relationships.
 * `game/engine.py` contains the slot machine logic, symbol generation, paylines, and winnings calculation.
-* `slotmachine2.py` contains the original command-line version of the slot machine.
 * `tests/` contains the automated API tests.
 * `requirements.txt` contains the Python packages required to run the project.
 

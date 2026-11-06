@@ -19,9 +19,8 @@ def check_winnings(columns,lines,bet,values):
         non_wild=[s for s in current_line if s!="W"]
         if len(non_wild)==0 or len(set(non_wild))==1:
             symbol_to_use="W" if len(non_wild)==0 else non_wild[0]
-            win=values[symbol_to_use]*bet
             multiplier=jackpot_multiplier[symbol_to_use]
-            win*=multiplier
+            win=bet*multiplier
             is_jackpot=all(s=="W" for s in current_line)
             if is_jackpot:
              winning_lines.append((f"Line {line_number+1}",f"x{multiplier}","jackpot!"))

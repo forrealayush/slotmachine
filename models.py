@@ -1,5 +1,4 @@
 from sqlalchemy import Column,Integer,String,ForeignKey,DateTime
-from database import engine
 from sqlalchemy.orm import declarative_base,relationship
 from datetime import datetime,timezone
 
@@ -44,4 +43,3 @@ class Deposit(Base):
     created_at=Column(DateTime,default=lambda: datetime.now(timezone.utc),nullable=False)
     user=relationship("User",back_populates="deposits")
 
-Base.metadata.create_all(engine)

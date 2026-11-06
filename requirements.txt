@@ -1,9 +1,9 @@
 fastapi==0.119.0
 uvicorn==0.37.0
 pytest==9.1.1
-requests==2.34.2
 sqlalchemy==2.1.1
 pwdlib[argon2]
 pyjwt
 python-multipart
 httpx
+alembic

@@ -1,7 +1,7 @@
 from sqlalchemy import Column,Integer,String,ForeignKey,DateTime
 from database import engine
 from sqlalchemy.orm import declarative_base,relationship
-from datetime import datetime
+from datetime import datetime,timezone
 
 Base=declarative_base()
 
@@ -32,7 +32,7 @@ class Bet(Base):
     lines=Column(Integer,nullable=False)
     winnings=Column(Integer,nullable=False)
     net_result=Column(Integer,nullable=False)  
-    created_at=Column(DateTime,default=datetime.utcnow,nullable=False)  
+    created_at=Column(DateTime,default=lambda: datetime.now(timezone.utc),nullable=False)
     session=relationship("GameSession",back_populates="bets")
 
 class Deposit(Base):
@@ -41,7 +41,7 @@ class Deposit(Base):
     id=Column(Integer,primary_key=True)
     user_id=Column(Integer,ForeignKey("users.id"),nullable=False)
     amount=Column(Integer,nullable=False)
-    created_at=Column(DateTime,default=datetime.utcnow,nullable=False)
+    created_at=Column(DateTime,default=lambda: datetime.now(timezone.utc),nullable=False)
     user=relationship("User",back_populates="deposits")
 
 Base.metadata.create_all(engine)

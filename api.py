@@ -325,7 +325,7 @@ def admin_stats(days:int=Query(7,ge=1),db:Session=Depends(get_db)):
     total_spins=len(total_bets)
 
     today=func.date(func.current_timestamp())
-    start_date=datetime.utcnow()-timedelta(days=days)
+    start_date=datetime.now(timezone.utc)-timedelta(days=days)
     range_bets=db.query(Bet).filter(Bet.created_at>=start_date).all()
     range_spins=len(range_bets)
     today_bets=db.query(Bet).filter(func.date(Bet.created_at)==today).all()

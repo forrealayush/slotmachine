@@ -77,3 +77,11 @@ def test_cannot_use_another_users_session(client,session_id):
     r=client.post("/game",params={"session_id":session_id,"bet":500,"lines":1},headers=other)
     assert r.status_code==404
     assert r.json()["detail"]=="Invalid session"
+
+def test_session_survives_restart(client,auth_headers,session_id):
+    from api import session_locks
+    session_locks.clear()
+
+    r=client.post(f"/session/{session_id}/deposit",params={"amount":1000},headers=auth_headers)
+    assert r.status_code==200
+    assert r.json()["balance"]==1000

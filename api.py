@@ -20,8 +20,10 @@ import tempfile
 from starlette.background import BackgroundTask
 app=FastAPI()
 
-sessions={}
+
 session_locks={}
+def get_session_lock(session_id:str):
+    return session_locks.setdefault(session_id,Lock())
 hasher=PasswordHash.recommended()
 
 class RegisterRequest(BaseModel):
@@ -125,9 +127,6 @@ def create_session(user:User=Depends(get_current_user),db:Session=Depends(get_db
     db.add(game_session)
     db.commit()
 
-    sessions[session_id]=user.id
-
-    session_locks[session_id]=Lock()
 
     return {
         "session_id":session_id,
@@ -143,8 +142,7 @@ def deposit(
     current_user:User=Depends(get_current_user),
     db:Session=Depends(get_db)
 ):
-    if session_id not in sessions:
-        raise HTTPException(status_code=404,detail="Invalid session")
+    
 
     if amount<500:
         raise HTTPException(status_code=400,detail="minimum deposit amount - 500")
@@ -161,7 +159,7 @@ def deposit(
     if not user:
         raise HTTPException(status_code=404,detail="User not found")
 
-    with session_locks[session_id]:
+    with get_session_lock(session_id):
         db.refresh(user)
         user.balance+=amount
 
@@ -202,8 +200,6 @@ def game(
     if lines<1 or lines>5:
         raise HTTPException(status_code=400,detail="Lines must be between 1 and 5")
 
-    if session_id not in sessions:
-        raise HTTPException(status_code=404,detail="Invalid session")
 
     game_session=db.query(GameSession).filter(GameSession.id==session_id).first()
 
@@ -218,7 +214,7 @@ def game(
     winnings,wins=check_winnings(slots,lines,bet,symbol_value)
     net=winnings-total_bet
 
-    with session_locks[session_id]:
+    with get_session_lock(session_id):
         user=db.query(User).filter(User.id==game_session.user_id).first()
         db.refresh(user)
 

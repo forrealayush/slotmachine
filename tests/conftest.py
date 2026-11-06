@@ -7,7 +7,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 
-from api import app,get_db,sessions,session_locks
+from api import app,get_db,session_locks
 from models import Base
 
 
@@ -28,7 +28,6 @@ def client(tmp_path):
             db.close()
 
     app.dependency_overrides[get_db]=override_get_db
-    sessions.clear()
     session_locks.clear()
 
     yield TestClient(app)

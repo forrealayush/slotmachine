@@ -1,4 +1,4 @@
-from fastapi import FastAPI,HTTPException,Query,Depends
+from fastapi import FastAPI,HTTPException,Query,Depends,status
 from threading import Lock
 from game.engine import get_slot_machine_spin,symbol_count,check_winnings,symbol_value
 import uuid
@@ -6,14 +6,16 @@ from database import SessionLocal
 from models import User,GameSession,Bet,Deposit
 from sqlalchemy.orm import Session
 from sqlalchemy import func
-from datetime import datetime,timedelta
+from datetime import datetime,timedelta,timezone
 import csv
 from fastapi.responses import FileResponse
 import json
 from pydantic import BaseModel
 from pwdlib import PasswordHash
 from sqlalchemy.exc import IntegrityError
-
+import os
+import jwt
+from fastapi.security import OAuth2PasswordRequestForm,OAuth2PasswordBearer
 app=FastAPI()
 
 sessions={}
@@ -24,6 +26,17 @@ class RegisterRequest(BaseModel):
     username:str
     password:str
 
+SECRET_KEY=os.environ.get("SLOT_SECRET_KEY")
+if not SECRET_KEY:
+    raise RuntimeError("SLOT_SECRET_KEY environment variable is not set")
+
+ALGORITHM="HS256"
+ACCESS_TOKEN_MINUTES=30
+
+def create_access_token(username:str):
+    expire=datetime.now(timezone.utc)+timedelta(minutes=ACCESS_TOKEN_MINUTES)
+    payload={"sub":username,"exp":expire}
+    return jwt.encode(payload,SECRET_KEY,algorithm=ALGORITHM)
 
 def get_db():
     db=SessionLocal()
@@ -31,6 +44,28 @@ def get_db():
         yield db
     finally:
         db.close()
+
+oauth2_scheme=OAuth2PasswordBearer(tokenUrl="login")
+
+def get_current_user(token:str=Depends(oauth2_scheme),db:Session=Depends(get_db)):
+    credentials_error=HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Invalid or expired token",
+        headers={"WWW-Authenticate":"Bearer"}
+    )
+
+    try:
+        payload=jwt.decode(token,SECRET_KEY,algorithms=[ALGORITHM])
+    except jwt.PyJWTError:
+        raise credentials_error
+
+    username=payload.get("sub")
+    user=db.query(User).filter(User.username==username).first()
+
+    if not user:
+        raise credentials_error
+
+    return user        
 
 
 @app.get("/")
@@ -60,6 +95,16 @@ def register(data:RegisterRequest,db:Session=Depends(get_db)):
         "role":user.role
     }
 
+@app.post("/login")
+def login(form:OAuth2PasswordRequestForm=Depends(),db:Session=Depends(get_db)):
+    user=db.query(User).filter(User.username==form.username).first()
+
+    if not user or not hasher.verify(form.password,user.password_hash):
+        raise HTTPException(status_code=401,detail="invalid username or password")
+
+    token=create_access_token(user.username)
+
+    return {"access_token":token,"token_type":"bearer"}
 
 @app.post("/session")
 def create_session(username:str,db:Session=Depends(get_db)):
@@ -431,3 +476,7 @@ def export_players_json(db:Session=Depends(get_db)):
         json.dump({"players":players},file,indent=4)
 
     return FileResponse("players.json",filename="players.json")
+
+@app.get("/me")
+def me(current_user:User=Depends(get_current_user)):
+    return {"username":current_user.username,"role":current_user.role}
